@@ -74,6 +74,7 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
     _webView.UIDelegate = self;
     _webView.navigationDelegate = self;
     _webView.scrollView.delegate = self;
+    [_webView loadHTMLString:@"<html></html>" baseURL:nil];
     
 #if defined(__IPHONE_OS_VERSION_MAX_ALLOWED) && __IPHONE_OS_VERSION_MAX_ALLOWED >= 110000 /* __IPHONE_11_0 */
     // `contentInsetAdjustmentBehavior` is only available since iOS 11.
@@ -312,7 +313,11 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
     _source = [source copy];
     _sendCookies = [source[@"sendCookies"] boolValue];
     if ([source[@"customUserAgent"] length] != 0 && [_webView respondsToSelector:@selector(setCustomUserAgent:)]) {
-      [_webView setCustomUserAgent:source[@"customUserAgent"]];
+      [_webView evaluateJavaScript:@"navigator.userAgent" completionHandler:^(id __nullable userAgent, NSError * __nullable error) {
+        NSString * combinedUserAgent = [NSString stringWithFormat:@"%@ %@",userAgent, source[@"customUserAgent"]];
+          NSLog(@"%@",combinedUserAgent);
+          [_webView setCustomUserAgent:combinedUserAgent];
+      }];
     }
     
     // Allow loading local files:
@@ -468,8 +473,8 @@ RCT_NOT_IMPLEMENTED(- (instancetype)initWithCoder:(NSCoder *)aDecoder)
   NSURLRequest *request = navigationAction.request;
   NSURL* url = request.URL;
   NSString* scheme = url.scheme;
-  
-  BOOL isJSNavigation = [scheme isEqualToString:RCTJSNavigationScheme];
+  NSString *rctJSNavigationScheme = @"react-js-navigation";
+  BOOL isJSNavigation = [scheme isEqualToString:rctJSNavigationScheme];
   
   // handle mailto and tel schemes
   if ([scheme isEqualToString:@"mailto"] || [scheme isEqualToString:@"tel"]) {
